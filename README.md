@@ -1,21 +1,26 @@
 # VPS Preparation Script
 
-This script (`preparevps.sh`) automates the setup of a new Ubuntu VPS with a secure user account, SSH hardening, and a Docker-based homelab environment featuring Portainer and Nginx Proxy Manager.
+This script (`preparevps.sh`) automates the setup of a new Ubuntu VPS with a secure user account, SSH hardening, and Docker services featuring Portainer and Nginx Proxy Manager.
 
 ## What This Script Does
 
-1. **User Creation & Security**
+1. **Docker Installation**
+   - Installs Docker CE and Docker Compose from official repositories
+   - Configures Docker service to start automatically
+
+2. **User Creation & Security**
    - Creates a new non-root user with sudo privileges
+   - Adds user to docker group for container management
    - Generates an SSH key pair for the user
    - Hardens SSH configuration (disables password auth, root login)
    - Sets up ZSH as the default shell
 
-2. **SSH Key Management**
+3. **SSH Key Management**
    - Generates a new ed25519 SSH key pair
    - Displays the private key for you to save locally
    - Configures public key authentication
 
-3. **Homelab Setup**
+4. **Docker Services Setup**
    - Creates a Docker Compose configuration for:
      - **Portainer** (Docker management UI) - accessible on port 9000
      - **Nginx Proxy Manager** (reverse proxy with SSL) - admin on port 81, proxy on ports 80/443
@@ -24,8 +29,8 @@ This script (`preparevps.sh`) automates the setup of a new Ubuntu VPS with a sec
 ## Prerequisites
 
 - Fresh Ubuntu 20.04/22.04 VPS with root access
-- Docker and Docker Compose installed on the VPS
 - SSH access to the VPS as root
+- Internet connection on the VPS (for downloading Docker and packages)
 
 ## Usage
 
@@ -70,7 +75,7 @@ ssh -i ~/.ssh/your-vps-key username@your-vps-ip
 Once logged in as the new user:
 
 ```bash
-cd ~/homelab
+cd ~/docker-services
 docker-compose up -d
 ```
 
@@ -105,7 +110,7 @@ After running, your VPS will have:
 │   ├── id_ed25519.pub      # Public key
 │   └── authorized_keys     # Authorized public keys
 ├── .config/                # User configuration directory
-└── homelab/
+└── docker-services/
     ├── docker-compose.yml  # Main compose file
     ├── portainer/          # Portainer data
     └── nginx-proxy-manager/
@@ -129,8 +134,9 @@ After running, your VPS will have:
 - Verify the username and IP address
 
 ### Docker Issues
-- Ensure Docker and Docker Compose are installed on your VPS
-- Check if the user is in the docker group: `groups $USER`
+- If Docker installation fails, check your internet connection
+- Verify the user is in the docker group: `groups $USER`
+- Restart the Docker service if needed: `sudo systemctl restart docker`
 
 ### Service Access Issues
 - Check if services are running: `docker-compose ps`

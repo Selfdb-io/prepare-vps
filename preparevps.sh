@@ -16,9 +16,31 @@ set -euo pipefail
 # -o pipefail : fail a pipeline if any component command fails
 
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -yq zsh
+DEBIAN_FRONTEND=noninteractive apt-get install -yq zsh curl ca-certificates gnupg lsb-release
 
 ZSH_BIN="$(command -v zsh || true)"
+
+# ----------------------------------------------------------------------
+#  Install Docker
+# ----------------------------------------------------------------------
+echo "Installing Docker..."
+
+# Add Docker's official GPG key
+mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Add Docker repository
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Update package index and install Docker
+apt-get update -qq
+DEBIAN_FRONTEND=noninteractive apt-get install -yq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Start and enable Docker service
+systemctl start docker
+systemctl enable docker
+
+echo "✅ Docker installed successfully."
 
 # Add zsh to /etc/shells if missing
 if [[ -n "$ZSH_BIN" && ! $(grep -Fx "$ZSH_BIN" /etc/shells) ]]; then
@@ -156,11 +178,11 @@ systemctl restart ssh      # graceful restart (Ubuntu service name)
 echo "✅ User $username created and SSH hardened successfully."
 
 # Setup Portainer and Nginx Proxy Manager
-mkdir -p /home/$username/homelab/portainer
-mkdir -p /home/$username/homelab/nginx-proxy-manager
+mkdir -p /home/$username/docker-services/portainer
+mkdir -p /home/$username/docker-services/nginx-proxy-manager
 
 # Create docker-compose.yml for Portainer and NPM
-cat > /home/$username/homelab/docker-compose.yml <<'EOF'
+cat > /home/$username/docker-services/docker-compose.yml <<'EOF'
 version: '3.8'
 
 services:
@@ -174,7 +196,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./portainer:/data
     networks:
-      - homelab
+      - docker-services
 
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
@@ -188,17 +210,17 @@ services:
       - ./nginx-proxy-manager/data:/data
       - ./nginx-proxy-manager/letsencrypt:/etc/letsencrypt
     networks:
-      - homelab
+      - docker-services
 
 networks:
-  homelab:
+  docker-services:
     driver: bridge
 EOF
 
-mkdir -p /home/$username/homelab/nginx-proxy-manager/data
-mkdir -p /home/$username/homelab/nginx-proxy-manager/letsencrypt
+mkdir -p /home/$username/docker-services/nginx-proxy-manager/data
+mkdir -p /home/$username/docker-services/nginx-proxy-manager/letsencrypt
 
-chown -R $username:$username /home/$username/homelab
+chown -R $username:$username /home/$username/docker-services
 
 mkdir -p /home/$username/.config
 chown -R $username:$username /home/$username/.config

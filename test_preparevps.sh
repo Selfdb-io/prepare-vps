@@ -49,7 +49,7 @@ setup_test_env() {
     sed 's|/home/|'"$TEST_DIR"'/home/|g' preparevps.sh > "$TEST_DIR/preparevps_test.sh"
     
     # Remove commands that require root privileges for local testing
-    sed -i.bak '/apt-get\|useradd\|usermod\|chpasswd\|systemctl\|sshd/d' "$TEST_DIR/preparevps_test.sh"
+    sed -i.bak '/apt-get\|useradd\|usermod\|chpasswd\|systemctl\|sshd\|curl.*docker\|gpg\|docker-ce/d' "$TEST_DIR/preparevps_test.sh"
     
     # Mock the username input
     sed -i.bak 's/read -rp "Enter a username.*" username/username="'"$TEST_USERNAME"'"/' "$TEST_DIR/preparevps_test.sh"
@@ -87,9 +87,9 @@ test_docker_compose_creation() {
     log_test "Testing docker-compose.yml creation"
     
     # Simulate the docker-compose creation part
-    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/homelab"
+    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/docker-services"
     
-    cat > "$TEST_DIR/home/$TEST_USERNAME/homelab/docker-compose.yml" <<'EOF'
+    cat > "$TEST_DIR/home/$TEST_USERNAME/docker-services/docker-compose.yml" <<'EOF'
 version: '3.8'
 
 services:
@@ -103,7 +103,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./portainer:/data
     networks:
-      - homelab
+      - docker-services
 
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
@@ -117,19 +117,19 @@ services:
       - ./nginx-proxy-manager/data:/data
       - ./nginx-proxy-manager/letsencrypt:/etc/letsencrypt
     networks:
-      - homelab
+      - docker-services
 
 networks:
-  homelab:
+  docker-services:
     driver: bridge
 EOF
     
-    if [[ -f "$TEST_DIR/home/$TEST_USERNAME/homelab/docker-compose.yml" ]]; then
+    if [[ -f "$TEST_DIR/home/$TEST_USERNAME/docker-services/docker-compose.yml" ]]; then
         log_pass "docker-compose.yml created successfully"
         
         # Validate YAML syntax (if docker-compose is available)
         if command -v docker-compose &>/dev/null; then
-            if docker-compose -f "$TEST_DIR/home/$TEST_USERNAME/homelab/docker-compose.yml" config &>/dev/null; then
+            if docker-compose -f "$TEST_DIR/home/$TEST_USERNAME/docker-services/docker-compose.yml" config &>/dev/null; then
                 log_pass "docker-compose.yml syntax is valid"
             else
                 log_fail "docker-compose.yml syntax is invalid"
@@ -147,18 +147,18 @@ test_directory_structure() {
     log_test "Testing directory structure creation"
     
     # Create expected directories
-    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/homelab/portainer"
-    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/homelab/nginx-proxy-manager/data"
-    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/homelab/nginx-proxy-manager/letsencrypt"
+    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/docker-services/portainer"
+    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/docker-services/nginx-proxy-manager/data"
+    mkdir -p "$TEST_DIR/home/$TEST_USERNAME/docker-services/nginx-proxy-manager/letsencrypt"
     mkdir -p "$TEST_DIR/home/$TEST_USERNAME/.config"
     
     # Check if directories exist
     local expected_dirs=(
-        "$TEST_DIR/home/$TEST_USERNAME/homelab"
-        "$TEST_DIR/home/$TEST_USERNAME/homelab/portainer"
-        "$TEST_DIR/home/$TEST_USERNAME/homelab/nginx-proxy-manager"
-        "$TEST_DIR/home/$TEST_USERNAME/homelab/nginx-proxy-manager/data"
-        "$TEST_DIR/home/$TEST_USERNAME/homelab/nginx-proxy-manager/letsencrypt"
+        "$TEST_DIR/home/$TEST_USERNAME/docker-services"
+        "$TEST_DIR/home/$TEST_USERNAME/docker-services/portainer"
+        "$TEST_DIR/home/$TEST_USERNAME/docker-services/nginx-proxy-manager"
+        "$TEST_DIR/home/$TEST_USERNAME/docker-services/nginx-proxy-manager/data"
+        "$TEST_DIR/home/$TEST_USERNAME/docker-services/nginx-proxy-manager/letsencrypt"
         "$TEST_DIR/home/$TEST_USERNAME/.config"
     )
     
