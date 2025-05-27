@@ -177,12 +177,13 @@ systemctl restart ssh      # graceful restart (Ubuntu service name)
 
 echo "✅ User $username created and SSH hardened successfully."
 
+
 # Setup Portainer and Nginx Proxy Manager
-mkdir -p /home/$username/docker-services/portainer
-mkdir -p /home/$username/docker-services/nginx-proxy-manager
+mkdir -p /home/$username/selfdb/portainer
+mkdir -p /home/$username/selfdb/nginx-proxy-manager
 
 # Create docker-compose.yml for Portainer and NPM
-cat > /home/$username/docker-services/docker-compose.yml <<'EOF'
+cat > /home/$username/selfdb/docker-compose.yml <<'EOF'
 version: '3.8'
 
 services:
@@ -196,7 +197,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./portainer:/data
     networks:
-      - docker-services
+      - selfdb
 
   nginx-proxy-manager:
     image: jc21/nginx-proxy-manager:latest
@@ -210,17 +211,17 @@ services:
       - ./nginx-proxy-manager/data:/data
       - ./nginx-proxy-manager/letsencrypt:/etc/letsencrypt
     networks:
-      - docker-services
+      - selfdb
 
 networks:
-  docker-services:
+  selfdb:
     driver: bridge
 EOF
 
-mkdir -p /home/$username/docker-services/nginx-proxy-manager/data
-mkdir -p /home/$username/docker-services/nginx-proxy-manager/letsencrypt
+mkdir -p /home/$username/selfdb/nginx-proxy-manager/data
+mkdir -p /home/$username/selfdb/nginx-proxy-manager/letsencrypt
 
-chown -R $username:$username /home/$username/docker-services
+chown -R $username:$username /home/$username/selfdb
 
 mkdir -p /home/$username/.config
 chown -R $username:$username /home/$username/.config
